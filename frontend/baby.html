@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baby — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"><div class="sidebar-header"><div class="sidebar-logo">💰</div><div class="sidebar-title">Personal Finance<span>Management System</span></div></div><nav class="sidebar-nav" id="sidebarNav"></nav><div class="sidebar-footer"><button class="btn btn-secondary btn-full btn-sm" onclick="logout()">🚪 Logout</button></div></aside>
+  <div class="main-content">
+    <div class="topbar"><div class="topbar-title">👶 Baby Tracker</div><div class="topbar-right"><div class="date-badge" id="bsDate"></div></div></div>
+    <div class="page-body">
+      <div class="tabs">
+        <button class="tab active" id="tabExp" onclick="switchTab('expense')">🍼 Expenses</button>
+        <button class="tab" id="tabGift" onclick="switchTab('gift')">🎁 Gift Money</button>
+      </div>
+
+      <!-- Expenses Tab -->
+      <div id="expenseTab">
+        <div class="page-header">
+          <div class="page-header-title">🍼 Baby Expenses</div>
+          <button class="btn btn-primary" onclick="openExpModal()">+ Add Expense</button>
+        </div>
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card expense"><div class="stat-icon">💸</div><div class="stat-value" id="totalBabyExp">Rs. 0</div><div class="stat-label">Total Baby Expenses</div></div>
+          <div class="stat-card income"><div class="stat-icon">🎁</div><div class="stat-value" id="totalGifts">Rs. 0</div><div class="stat-label">Total Gifts Received</div></div>
+          <div class="stat-card savings"><div class="stat-icon">💰</div><div class="stat-value" id="netBaby">Rs. 0</div><div class="stat-label">Net (Gifts - Expenses)</div></div>
+        </div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">🍕 Baby Expense Categories</span></div>
+          <div class="card-body"><div class="chart-container"><canvas id="babyChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📋 Baby Expense Records</span></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Date BS</th><th>Category</th><th>Particular</th><th>Amount</th><th>Remarks</th><th>Actions</th></tr></thead>
+              <tbody id="expTableBody"><tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gifts Tab -->
+      <div id="giftTab" style="display:none">
+        <div class="page-header">
+          <div class="page-header-title">🎁 Gift Money Received</div>
+          <button class="btn btn-primary" onclick="openGiftModal()">+ Add Gift</button>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🎁 Gift Records</span><span class="positive" id="giftTotal">Rs. 0</span></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Person Name</th><th>Amount</th><th>Date BS</th><th>Remarks</th><th>Actions</th></tr></thead>
+              <tbody id="giftTableBody"><tr><td colspan="6"><div class="loader"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div class="modal-overlay" id="expModal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="expModalTitle">Add Baby Expense</span><button class="modal-close" onclick="closeExpModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editExpId">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date BS</label><input type="text" id="fExpDateBs" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Date AD</label><input type="date" id="fExpDateAd" class="form-control"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Year BS</label><input type="number" id="fExpYear" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Month</label>
+          <select id="fExpMonth" class="form-control"><option value="1">Baisakh</option><option value="2">Jestha</option><option value="3">Ashadh</option><option value="4">Shrawan</option><option value="5">Bhadra</option><option value="6">Ashwin</option><option value="7">Kartik</option><option value="8">Mangsir</option><option value="9">Poush</option><option value="10">Magh</option><option value="11">Falgun</option><option value="12">Chaitra</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Category</label>
+        <select id="fExpCat" class="form-control">
+          <option>Clothes</option><option>Food</option><option>Diapers</option><option>Coconut Oil</option><option>Lactodex/Cereals</option><option>Education</option><option>Playground</option><option>Health</option><option>Others</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Particular</label><input type="text" id="fExpParticular" class="form-control" placeholder="Description"></div>
+      <div class="form-group"><label class="form-label">Amount (Rs.)</label><input type="number" id="fExpAmount" class="form-control" placeholder="0" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Remarks</label><input type="text" id="fExpRemarks" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeExpModal()">Cancel</button><button class="btn btn-primary" onclick="saveExpense()">💾 Save</button></div>
+  </div>
+</div>
+
+<!-- Gift Modal -->
+<div class="modal-overlay" id="giftModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title" id="giftModalTitle">Add Gift</span><button class="modal-close" onclick="closeGiftModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editGiftId">
+      <div class="form-group"><label class="form-label">Person Name</label><input type="text" id="fGiftName" class="form-control" placeholder="Full name"></div>
+      <div class="form-group"><label class="form-label">Amount (Rs.)</label><input type="number" id="fGiftAmount" class="form-control" placeholder="0" step="0.01"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date BS</label><input type="text" id="fGiftDateBs" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Date AD</label><input type="date" id="fGiftDateAd" class="form-control"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Remarks</label><input type="text" id="fGiftRemarks" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeGiftModal()">Cancel</button><button class="btn btn-primary" onclick="saveGift()">💾 Save</button></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+document.getElementById('sidebarNav').innerHTML = buildSidebar('baby');
+const bsNow = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bsNow.day} ${bsNow.month_name} ${bsNow.year} BS`;
+
+function switchTab(t) {
+  document.getElementById('tabExp').classList.toggle('active', t==='expense');
+  document.getElementById('tabGift').classList.toggle('active', t==='gift');
+  document.getElementById('expenseTab').style.display = t==='expense'?'':'none';
+  document.getElementById('giftTab').style.display = t==='gift'?'':'none';
+  if(t==='gift') loadGifts();
+}
+
+function prefillExpDates(){ const b=getCurrentBSDate(); document.getElementById('fExpDateBs').value=b.date_str; document.getElementById('fExpDateAd').value=b.date_ad; document.getElementById('fExpYear').value=b.year; document.getElementById('fExpMonth').value=b.month; }
+function prefillGiftDates(){ const b=getCurrentBSDate(); document.getElementById('fGiftDateBs').value=b.date_str; document.getElementById('fGiftDateAd').value=b.date_ad; }
+
+async function loadExpenses() {
+  const data = await api('/api/baby/expense');
+  const giftsData = await api('/api/baby/gift');
+  const te = data.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const tg = giftsData.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  document.getElementById('totalBabyExp').textContent = fmt(te);
+  document.getElementById('totalGifts').textContent = fmt(tg);
+  const netEl = document.getElementById('netBaby');
+  const net = tg - te;
+  netEl.textContent = fmt(net);
+  netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Category chart
+  const byCat = {};
+  data.forEach(r => { byCat[r.category] = (byCat[r.category]||0) + parseFloat(r.amount||0); });
+  const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  if (cats.length) {
+    const ctx = document.getElementById('babyChart').getContext('2d');
+    if(window._babyChart) window._babyChart.destroy();
+    window._babyChart = new Chart(ctx, {
+      type:'doughnut',
+      data:{ labels:cats.map(c=>c[0]), datasets:[{ data:cats.map(c=>c[1]), backgroundColor:['#00d4ff','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4','#8b5cf6','#34d399','#fbbf24'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'right', labels:{ color:'#94a3b8', font:{ size:11 } } } } }
+    });
+  }
+
+  const tbody = document.getElementById('expTableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👶</div><p>No baby expense records</p></div></td></tr>';return;}
+  tbody.innerHTML = data.map((r,i)=>`<tr>
+    <td>${i+1}</td><td>${r.date_bs}</td>
+    <td><span class="badge badge-purple">${r.category}</span></td>
+    <td>${r.particular||'—'}</td>
+    <td class="negative">${fmt(r.amount)}</td>
+    <td style="color:var(--text-muted)">${r.remarks||'—'}</td>
+    <td><button class="btn btn-warning btn-icon" onclick='editExpense(${JSON.stringify(r)})'>✏️</button> <button class="btn btn-danger btn-icon" onclick="deleteExpense(${r.id})">🗑️</button></td>
+  </tr>`).join('');
+}
+
+async function loadGifts() {
+  const data = await api('/api/baby/gift');
+  const total = data.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  document.getElementById('giftTotal').textContent = fmt(total);
+  const tbody = document.getElementById('giftTableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🎁</div><p>No gift records</p></div></td></tr>';return;}
+  tbody.innerHTML = data.map((r,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><strong>${r.person_name}</strong></td>
+    <td class="positive">${fmt(r.amount)}</td>
+    <td>${r.date_bs||r.date_ad||'—'}</td>
+    <td style="color:var(--text-muted)">${r.remarks||'—'}</td>
+    <td><button class="btn btn-warning btn-icon" onclick='editGift(${JSON.stringify(r)})'>✏️</button> <button class="btn btn-danger btn-icon" onclick="deleteGift(${r.id})">🗑️</button></td>
+  </tr>`).join('');
+}
+
+function openExpModal(){document.getElementById('editExpId').value='';document.getElementById('expModalTitle').textContent='Add Baby Expense';document.getElementById('fExpCat').value='Clothes';document.getElementById('fExpParticular').value='';document.getElementById('fExpAmount').value='';document.getElementById('fExpRemarks').value='';prefillExpDates();document.getElementById('expModal').classList.add('active');}
+function editExpense(r){document.getElementById('editExpId').value=r.id;document.getElementById('expModalTitle').textContent='Edit Baby Expense';document.getElementById('fExpDateBs').value=r.date_bs||'';document.getElementById('fExpDateAd').value=r.date_ad||'';document.getElementById('fExpYear').value=r.year_bs||'';document.getElementById('fExpMonth').value=r.month_num||1;document.getElementById('fExpCat').value=r.category;document.getElementById('fExpParticular').value=r.particular||'';document.getElementById('fExpAmount').value=r.amount;document.getElementById('fExpRemarks').value=r.remarks||'';document.getElementById('expModal').classList.add('active');}
+function closeExpModal(){document.getElementById('expModal').classList.remove('active');}
+async function saveExpense(){const id=document.getElementById('editExpId').value;const monthNum=parseInt(document.getElementById('fExpMonth').value);const body={date_bs:document.getElementById('fExpDateBs').value,date_ad:document.getElementById('fExpDateAd').value,year_bs:parseInt(document.getElementById('fExpYear').value),month_bs:BS_MONTHS[monthNum-1],month_num:monthNum,category:document.getElementById('fExpCat').value,particular:document.getElementById('fExpParticular').value,amount:parseFloat(document.getElementById('fExpAmount').value)||0,remarks:document.getElementById('fExpRemarks').value};const res=await api(id?`/api/baby/expense/${id}`:'/api/baby/expense',id?'PUT':'POST',body);if(res.success){showToast(res.message);closeExpModal();loadExpenses();}else showToast(res.message||'Error','error');}
+async function deleteExpense(id){if(!await confirm_delete())return;const res=await api(`/api/baby/expense/${id}`,'DELETE');if(res.success){showToast(res.message);loadExpenses();}else showToast('Error','error');}
+
+function openGiftModal(){document.getElementById('editGiftId').value='';document.getElementById('giftModalTitle').textContent='Add Gift';document.getElementById('fGiftName').value='';document.getElementById('fGiftAmount').value='';document.getElementById('fGiftRemarks').value='';prefillGiftDates();document.getElementById('giftModal').classList.add('active');}
+function editGift(r){document.getElementById('editGiftId').value=r.id;document.getElementById('giftModalTitle').textContent='Edit Gift';document.getElementById('fGiftName').value=r.person_name;document.getElementById('fGiftAmount').value=r.amount;document.getElementById('fGiftDateBs').value=r.date_bs||'';document.getElementById('fGiftDateAd').value=r.date_ad||'';document.getElementById('fGiftRemarks').value=r.remarks||'';document.getElementById('giftModal').classList.add('active');}
+function closeGiftModal(){document.getElementById('giftModal').classList.remove('active');}
+async function saveGift(){const id=document.getElementById('editGiftId').value;const body={person_name:document.getElementById('fGiftName').value,amount:parseFloat(document.getElementById('fGiftAmount').value)||0,date_bs:document.getElementById('fGiftDateBs').value,date_ad:document.getElementById('fGiftDateAd').value||null,remarks:document.getElementById('fGiftRemarks').value};const res=await api(id?`/api/baby/gift/${id}`:'/api/baby/gift',id?'PUT':'POST',body);if(res.success){showToast(res.message);closeGiftModal();loadGifts();}else showToast(res.message||'Error','error');}
+async function deleteGift(id){if(!await confirm_delete())return;const res=await api(`/api/baby/gift/${id}`,'DELETE');if(res.success){showToast(res.message);loadGifts();}else showToast('Error','error');}
+
+loadExpenses();
+</script>
+</body>
+</html>

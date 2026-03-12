@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Net Worth — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"><div class="sidebar-header"><div class="sidebar-logo">💰</div><div class="sidebar-title">Personal Finance<span>Management System</span></div></div><nav class="sidebar-nav" id="sidebarNav"></nav><div class="sidebar-footer"><button class="btn btn-secondary btn-full btn-sm" onclick="logout()">🚪 Logout</button></div></aside>
+  <div class="main-content">
+    <div class="topbar"><div class="topbar-title">📈 Net Worth</div><div class="topbar-right"><div class="date-badge" id="bsDate"></div></div></div>
+    <div class="page-body">
+      <div class="page-header">
+        <div class="page-header-title">📈 Net Worth Tracker</div>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Entry</button>
+      </div>
+      <div id="latestCard" style="margin-bottom:20px"></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📈 Net Worth Trend</span></div>
+        <div class="card-body"><div class="chart-container" style="height:260px"><canvas id="nwChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 History</span></div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Date BS</th><th>Bank</th><th>Cash</th><th>Shares</th><th>SSF</th><th>Loan Given</th><th>Property</th><th>Net Worth</th><th>Actions</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="9"><div class="loader"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><span class="modal-title" id="modalTitle">Add Net Worth Entry</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date BS</label><input type="text" id="fDateBs" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Date AD</label><input type="date" id="fDateAd" class="form-control"></div>
+      </div>
+      <div class="nw-grid" style="margin-bottom:14px">
+        <div class="form-group"><label class="form-label">🏦 Bank Balance</label><input type="number" id="fBank" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">💵 Cash</label><input type="number" id="fCash" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">📉 Share Value</label><input type="number" id="fShare" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">🏛️ SSF</label><input type="number" id="fSSF" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">🤝 Loan Given</label><input type="number" id="fLoan" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">🏠 Property Value</label><input type="number" id="fProp" class="form-control" placeholder="0" oninput="calcNW()"></div>
+        <div class="form-group"><label class="form-label">💰 Savings</label><input type="number" id="fSavings" class="form-control" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">📥 Earned</label><input type="number" id="fEarned" class="form-control" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">💸 Payout Amt</label><input type="number" id="fPayout" class="form-control" placeholder="0"></div>
+      </div>
+      <div class="nw-total-box">
+        <div class="nw-total-label">Calculated Net Worth</div>
+        <div class="nw-total-value" id="calcNW">Rs. 0</div>
+      </div>
+      <div class="form-group" style="margin-top:14px"><label class="form-label">Remarks</label><input type="text" id="fRemarks" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRecord()">💾 Save</button></div>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script>
+document.getElementById('sidebarNav').innerHTML = buildSidebar('networth');
+const bs = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bs.day} ${bs.month_name} ${bs.year} BS`;
+prefillDates();
+
+function prefillDates() {
+  const b = getCurrentBSDate();
+  document.getElementById('fDateBs').value = b.date_str;
+  document.getElementById('fDateAd').value = b.date_ad;
+}
+
+function calcNW() {
+  const vals = ['fBank','fCash','fShare','fSSF','fLoan','fProp'].map(id=>parseFloat(document.getElementById(id).value)||0);
+  const total = vals.reduce((a,b)=>a+b,0);
+  document.getElementById('calcNW').textContent = fmt(total);
+}
+
+async function loadData() {
+  const data = await api('/api/networth');
+  // Latest card
+  if (data.length) {
+    const l = data[0];
+    document.getElementById('latestCard').innerHTML = `
+      <div class="card" style="border-color:var(--accent)">
+        <div class="card-header"><span class="card-title">💡 Latest Net Worth — ${l.date_bs}</span></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+            ${[['🏦 Bank',l.bank_balance],['💵 Cash',l.cash],['📉 Shares',l.share_value],['🏛️ SSF',l.ssf],['🤝 Loan Given',l.loan_given],['🏠 Property',l.property_value]].map(([label,val])=>`
+              <div style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:14px">
+                <div style="font-size:12px;color:var(--text-muted)">${label}</div>
+                <div style="font-family:Syne,sans-serif;font-size:16px;font-weight:700;color:var(--accent);margin-top:4px">${fmt(val)}</div>
+              </div>`).join('')}
+          </div>
+          <div class="nw-total-box" style="margin-top:16px">
+            <div class="nw-total-label">Total Net Worth</div>
+            <div class="nw-total-value">${fmt(l.net_worth)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  
+  // Chart
+  const trend = data.slice(0,30).reverse();
+  if (trend.length) {
+    const ctx = document.getElementById('nwChart').getContext('2d');
+    if (window._nwChart) window._nwChart.destroy();
+    window._nwChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: trend.map(d=>d.date_bs),
+        datasets: [
+          { label:'Net Worth', data:trend.map(d=>parseFloat(d.net_worth)), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.15)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#7c3aed' },
+          { label:'Bank Balance', data:trend.map(d=>parseFloat(d.bank_balance)), borderColor:'#00d4ff', fill:false, tension:0.4, pointRadius:3 },
+          { label:'Shares', data:trend.map(d=>parseFloat(d.share_value)), borderColor:'#10b981', fill:false, tension:0.4, pointRadius:3 },
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#94a3b8' } } }, scales:{ x:{ ticks:{ color:'#94a3b8' }, grid:{ color:'rgba(255,255,255,0.04)' } }, y:{ ticks:{ color:'#94a3b8', callback:v=>'Rs.'+v.toLocaleString('en-IN') }, grid:{ color:'rgba(255,255,255,0.04)' } } } }
+    });
+  }
+  
+  // Table
+  const tbody = document.getElementById('tableBody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📈</div><p>No net worth records</p></div></td></tr>'; return; }
+  tbody.innerHTML = data.map(r=>`<tr>
+    <td>${r.date_bs}</td>
+    <td>${fmt(r.bank_balance)}</td><td>${fmt(r.cash)}</td><td>${fmt(r.share_value)}</td>
+    <td>${fmt(r.ssf)}</td><td>${fmt(r.loan_given)}</td><td>${fmt(r.property_value)}</td>
+    <td class="positive" style="font-weight:700">${fmt(r.net_worth)}</td>
+    <td><button class="btn btn-warning btn-icon" onclick='editRecord(${JSON.stringify(r)})'>✏️</button> <button class="btn btn-danger btn-icon" onclick="deleteRecord(${r.id})">🗑️</button></td>
+  </tr>`).join('');
+}
+
+function openModal() { document.getElementById('editId').value=''; document.getElementById('modalTitle').textContent='Add Net Worth Entry'; ['fBank','fCash','fShare','fSSF','fLoan','fProp','fSavings','fEarned','fPayout'].forEach(id=>document.getElementById(id).value=''); document.getElementById('fRemarks').value=''; prefillDates(); document.getElementById('calcNW').textContent='Rs. 0'; document.getElementById('modalOverlay').classList.add('active'); }
+function editRecord(r) {
+  document.getElementById('editId').value=r.id; document.getElementById('modalTitle').textContent='Edit Net Worth';
+  document.getElementById('fDateBs').value=r.date_bs; document.getElementById('fDateAd').value=r.date_ad;
+  document.getElementById('fBank').value=r.bank_balance; document.getElementById('fCash').value=r.cash;
+  document.getElementById('fShare').value=r.share_value; document.getElementById('fSSF').value=r.ssf;
+  document.getElementById('fLoan').value=r.loan_given; document.getElementById('fProp').value=r.property_value;
+  document.getElementById('fSavings').value=r.savings; document.getElementById('fEarned').value=r.earned;
+  document.getElementById('fPayout').value=r.payout_amount; document.getElementById('fRemarks').value=r.remarks||'';
+  document.getElementById('calcNW').textContent=fmt(r.net_worth);
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+async function saveRecord() {
+  const id = document.getElementById('editId').value;
+  const body = { date_bs:document.getElementById('fDateBs').value, date_ad:document.getElementById('fDateAd').value, bank_balance:parseFloat(document.getElementById('fBank').value)||0, cash:parseFloat(document.getElementById('fCash').value)||0, share_value:parseFloat(document.getElementById('fShare').value)||0, ssf:parseFloat(document.getElementById('fSSF').value)||0, loan_given:parseFloat(document.getElementById('fLoan').value)||0, property_value:parseFloat(document.getElementById('fProp').value)||0, savings:parseFloat(document.getElementById('fSavings').value)||0, earned:parseFloat(document.getElementById('fEarned').value)||0, payout_amount:parseFloat(document.getElementById('fPayout').value)||0, remarks:document.getElementById('fRemarks').value };
+  const res = await api(id?`/api/networth/${id}`:'/api/networth', id?'PUT':'POST', body);
+  if(res.success){showToast(res.message);closeModal();loadData();}else showToast(res.message||'Error','error');
+}
+async function deleteRecord(id) { if(!await confirm_delete())return; const res=await api(`/api/networth/${id}`,'DELETE'); if(res.success){showToast(res.message);loadData();}else showToast('Error','error'); }
+loadData();
+</script>
+</body>
+</html>

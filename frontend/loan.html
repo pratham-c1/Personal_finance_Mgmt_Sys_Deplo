@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loans — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"><div class="sidebar-header"><div class="sidebar-logo">💰</div><div class="sidebar-title">Personal Finance<span>Management System</span></div></div><nav class="sidebar-nav" id="sidebarNav"></nav><div class="sidebar-footer"><button class="btn btn-secondary btn-full btn-sm" onclick="logout()">🚪 Logout</button></div></aside>
+  <div class="main-content">
+    <div class="topbar"><div class="topbar-title">🤝 Loans</div><div class="topbar-right"><div class="date-badge" id="bsDate"></div></div></div>
+    <div class="page-body">
+      <div class="page-header">
+        <div class="page-header-title">🤝 Loan Records</div>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Loan</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card loans"><div class="stat-icon">🤝</div><div class="stat-value" id="totalPrincipal">Rs. 0</div><div class="stat-label">Total Given</div></div>
+        <div class="stat-card income"><div class="stat-icon">💹</div><div class="stat-value" id="totalInterest">Rs. 0</div><div class="stat-label">Total Interest</div></div>
+        <div class="stat-card savings"><div class="stat-icon">💰</div><div class="stat-value" id="totalPayable">Rs. 0</div><div class="stat-label">Total Payable</div></div>
+      </div>
+      <div class="filter-bar">
+        <div class="form-group"><label class="form-label">Status</label><select id="filterStatus" class="form-control"><option value="">All</option><option value="active">Active</option><option value="paid">Paid</option></select></div>
+        <button class="btn btn-primary" onclick="loadData()">🔍 Filter</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Loan Records</span></div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Borrower</th><th>Principal</th><th>Rate %</th><th>Duration</th><th>Loan Date</th><th>Interest</th><th>Total Payable</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="10"><div class="loader"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modalTitle">Add Loan</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-group"><label class="form-label">Borrower Name</label><input type="text" id="fName" class="form-control" placeholder="Full name"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Principal Amount</label><input type="number" id="fPrincipal" class="form-control" placeholder="0" oninput="calcLoan()"></div>
+        <div class="form-group"><label class="form-label">Interest Rate (%)</label><input type="number" id="fRate" class="form-control" placeholder="0" step="0.01" oninput="calcLoan()"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Duration (Months)</label><input type="number" id="fDuration" class="form-control" placeholder="0" oninput="calcLoan()"></div>
+        <div class="form-group"><label class="form-label">Loan Date BS</label><input type="text" id="fDateBs" class="form-control"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Loan Date AD</label><input type="date" id="fDateAd" class="form-control"></div>
+      <div style="background:rgba(0,212,255,0.06);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+          <div><div style="font-size:11px;color:var(--text-muted)">INTEREST</div><div id="calcInterest" style="font-family:Syne,sans-serif;color:var(--gold);font-size:18px;font-weight:700">Rs. 0</div></div>
+          <div><div style="font-size:11px;color:var(--text-muted)">TOTAL PAYABLE</div><div id="calcTotal" style="font-family:Syne,sans-serif;color:var(--accent);font-size:18px;font-weight:700">Rs. 0</div></div>
+          <div><div style="font-size:11px;color:var(--text-muted)">STATUS</div>
+            <select id="fStatus" class="form-control" style="margin-top:4px"><option value="active">Active</option><option value="paid">Paid</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Remarks</label><input type="text" id="fRemarks" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRecord()">💾 Save</button></div>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script>
+document.getElementById('sidebarNav').innerHTML = buildSidebar('loan');
+const bs = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bs.day} ${bs.month_name} ${bs.year} BS`;
+document.getElementById('fDateBs').value = bs.date_str;
+document.getElementById('fDateAd').value = bs.date_ad;
+
+function calcLoan() {
+  const p = parseFloat(document.getElementById('fPrincipal').value)||0;
+  const r = parseFloat(document.getElementById('fRate').value)||0;
+  const m = parseInt(document.getElementById('fDuration').value)||0;
+  const interest = (p*r*m)/(12*100);
+  document.getElementById('calcInterest').textContent = fmt(interest);
+  document.getElementById('calcTotal').textContent = fmt(p+interest);
+}
+
+async function loadData() {
+  const status = document.getElementById('filterStatus').value;
+  const data = await api(`/api/loan${status?'?status='+status:''}`);
+  let tp=0,ti=0,tpay=0;
+  data.forEach(r=>{tp+=parseFloat(r.principal);ti+=parseFloat(r.interest_amount);tpay+=parseFloat(r.total_payable);});
+  document.getElementById('totalPrincipal').textContent=fmt(tp);
+  document.getElementById('totalInterest').textContent=fmt(ti);
+  document.getElementById('totalPayable').textContent=fmt(tpay);
+  const tbody=document.getElementById('tableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🤝</div><p>No loan records</p></div></td></tr>';return;}
+  tbody.innerHTML=data.map((r,i)=>`<tr>
+    <td>${i+1}</td><td><strong>${r.borrower_name}</strong></td>
+    <td class="positive">${fmt(r.principal)}</td>
+    <td>${r.interest_rate}%</td><td>${r.duration_months}M</td>
+    <td>${r.loan_date_bs||r.loan_date_ad||'—'}</td>
+    <td class="neutral">${fmt(r.interest_amount)}</td>
+    <td class="positive" style="font-weight:700">${fmt(r.total_payable)}</td>
+    <td><span class="badge ${r.status==='active'?'badge-blue':'badge-green'}">${r.status}</span></td>
+    <td><button class="btn btn-warning btn-icon" onclick='editRecord(${JSON.stringify(r)})'>✏️</button> <button class="btn btn-danger btn-icon" onclick="deleteRecord(${r.id})">🗑️</button></td>
+  </tr>`).join('');
+}
+
+function openModal(){document.getElementById('editId').value='';document.getElementById('modalTitle').textContent='Add Loan';document.getElementById('fName').value='';document.getElementById('fPrincipal').value='';document.getElementById('fRate').value='';document.getElementById('fDuration').value='';document.getElementById('fRemarks').value='';document.getElementById('fStatus').value='active';document.getElementById('calcInterest').textContent='Rs. 0';document.getElementById('calcTotal').textContent='Rs. 0';const b=getCurrentBSDate();document.getElementById('fDateBs').value=b.date_str;document.getElementById('fDateAd').value=b.date_ad;document.getElementById('modalOverlay').classList.add('active');}
+function editRecord(r){document.getElementById('editId').value=r.id;document.getElementById('modalTitle').textContent='Edit Loan';document.getElementById('fName').value=r.borrower_name;document.getElementById('fPrincipal').value=r.principal;document.getElementById('fRate').value=r.interest_rate;document.getElementById('fDuration').value=r.duration_months;document.getElementById('fDateBs').value=r.loan_date_bs||'';document.getElementById('fDateAd').value=r.loan_date_ad||'';document.getElementById('fStatus').value=r.status;document.getElementById('fRemarks').value=r.remarks||'';document.getElementById('calcInterest').textContent=fmt(r.interest_amount);document.getElementById('calcTotal').textContent=fmt(r.total_payable);document.getElementById('modalOverlay').classList.add('active');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('active');}
+async function saveRecord(){const id=document.getElementById('editId').value;const body={borrower_name:document.getElementById('fName').value,principal:parseFloat(document.getElementById('fPrincipal').value)||0,interest_rate:parseFloat(document.getElementById('fRate').value)||0,duration_months:parseInt(document.getElementById('fDuration').value)||0,loan_date_bs:document.getElementById('fDateBs').value,loan_date_ad:document.getElementById('fDateAd').value||null,status:document.getElementById('fStatus').value,remarks:document.getElementById('fRemarks').value};const res=await api(id?`/api/loan/${id}`:'/api/loan',id?'PUT':'POST',body);if(res.success){showToast(res.message);closeModal();loadData();}else showToast(res.message||'Error','error');}
+async function deleteRecord(id){if(!await confirm_delete())return;const res=await api(`/api/loan/${id}`,'DELETE');if(res.success){showToast(res.message);loadData();}else showToast('Error','error');}
+loadData();
+</script>
+</body>
+</html>

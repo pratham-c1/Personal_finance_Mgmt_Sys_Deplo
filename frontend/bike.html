@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bike — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"><div class="sidebar-header"><div class="sidebar-logo">💰</div><div class="sidebar-title">Personal Finance<span>Management System</span></div></div><nav class="sidebar-nav" id="sidebarNav"></nav><div class="sidebar-footer"><button class="btn btn-secondary btn-full btn-sm" onclick="logout()">🚪 Logout</button></div></aside>
+  <div class="main-content">
+    <div class="topbar"><div class="topbar-title">🏍️ Bike</div><div class="topbar-right"><div class="date-badge" id="bsDate"></div></div></div>
+    <div class="page-body">
+      <div class="tabs">
+        <button class="tab active" id="tabBikes" onclick="switchTab('bikes')">🏍️ My Bikes</button>
+        <button class="tab" id="tabExpense" onclick="switchTab('expense')">🔧 Maintenance</button>
+      </div>
+
+      <!-- Bikes Tab -->
+      <div id="bikesTab">
+        <div class="page-header"><div class="page-header-title">🏍️ Registered Bikes</div><button class="btn btn-primary" onclick="openBikeModal()">+ Add Bike</button></div>
+        <div id="bikesList" class="stats-grid"></div>
+      </div>
+
+      <!-- Expense Tab -->
+      <div id="expenseTab" style="display:none">
+        <div class="page-header">
+          <div class="page-header-title">🔧 Maintenance Records</div>
+          <button class="btn btn-primary" onclick="openExpenseModal()">+ Add Record</button>
+        </div>
+        <div class="filter-bar">
+          <div class="form-group"><label class="form-label">Bike</label><select id="filterBike" class="form-control"><option value="">All Bikes</option></select></div>
+          <button class="btn btn-primary" onclick="loadExpenses()">🔍 Filter</button>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📋 Maintenance Records</span><span class="negative" id="expTotal">Rs. 0</span></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Bike</th><th>Particular</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Remarks</th><th>Actions</th></tr></thead>
+              <tbody id="expTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bike Modal -->
+<div class="modal-overlay" id="bikeModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title" id="bikeModalTitle">Add Bike</span><button class="modal-close" onclick="closeBikeModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editBikeId">
+      <div class="form-group"><label class="form-label">Bike Name</label><input type="text" id="fBikeName" class="form-control" placeholder="e.g. Honda CB150R"></div>
+      <div class="form-group"><label class="form-label">Number Plate</label><input type="text" id="fBikeNum" class="form-control" placeholder="e.g. Ba 1 Cha 1234"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Purchase Price</label><input type="number" id="fBikePrice" class="form-control" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" id="fBikeDate" class="form-control"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeBikeModal()">Cancel</button><button class="btn btn-primary" onclick="saveBike()">💾 Save</button></div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div class="modal-overlay" id="expenseModal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="expModalTitle">Add Maintenance</span><button class="modal-close" onclick="closeExpModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editExpId">
+      <div class="form-group"><label class="form-label">Bike</label><select id="fExpBike" class="form-control" onchange="onBikeChange()"><option value="">Select Bike</option></select></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date BS</label><input type="text" id="fExpDateBs" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Date AD</label><input type="date" id="fExpDateAd" class="form-control"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Year BS</label><input type="number" id="fExpYear" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Month</label><select id="fExpMonth" class="form-control"><option value="1">Baisakh</option><option value="2">Jestha</option><option value="3">Ashadh</option><option value="4">Shrawan</option><option value="5">Bhadra</option><option value="6">Ashwin</option><option value="7">Kartik</option><option value="8">Mangsir</option><option value="9">Poush</option><option value="10">Magh</option><option value="11">Falgun</option><option value="12">Chaitra</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Particular</label><input type="text" id="fExpParticular" class="form-control" placeholder="Service, oil change, etc."></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Quantity</label><input type="number" id="fExpQty" class="form-control" value="1" step="0.001" oninput="calcExpAmt()"></div>
+        <div class="form-group"><label class="form-label">Rate</label><input type="number" id="fExpRate" class="form-control" placeholder="0" oninput="calcExpAmt()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Amount</label><input type="number" id="fExpAmount" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Remarks</label><input type="text" id="fExpRemarks" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeExpModal()">Cancel</button><button class="btn btn-primary" onclick="saveExpense()">💾 Save</button></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+document.getElementById('sidebarNav').innerHTML = buildSidebar('bike');
+const bsNow = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bsNow.day} ${bsNow.month_name} ${bsNow.year} BS`;
+let bikes = [];
+
+function switchTab(t) {
+  document.getElementById('tabBikes').classList.toggle('active', t==='bikes');
+  document.getElementById('tabExpense').classList.toggle('active', t==='expense');
+  document.getElementById('bikesTab').style.display = t==='bikes'?'':'none';
+  document.getElementById('expenseTab').style.display = t==='expense'?'':'none';
+  if(t==='expense') loadExpenses();
+}
+
+async function loadBikes() {
+  bikes = await api('/api/bike');
+  const list = document.getElementById('bikesList');
+  if(!bikes.length){list.innerHTML='<div style="color:var(--text-muted);padding:20px">No bikes registered.</div>';return;}
+  list.innerHTML = bikes.map(b=>`<div class="stat-card" style="border-top:2px solid var(--accent)">
+    <div class="stat-icon">🏍️</div>
+    <div class="stat-value" style="font-size:16px">${b.bike_name}</div>
+    <div class="stat-label">${b.bike_number||'No plate'}</div>
+    <div style="margin-top:8px;font-size:13px;color:var(--text-muted)">Price: ${fmt(b.purchase_price)}</div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-warning btn-sm" onclick='editBike(${JSON.stringify(b)})'>✏️ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteBike(${b.id})">🗑️</button>
+    </div>
+  </div>`).join('');
+  
+  // Update filter and expense modal selects
+  const opts = bikes.map(b=>`<option value="${b.id}" data-name="${b.bike_name}" data-num="${b.bike_number||''}">${b.bike_name} (${b.bike_number||'—'})</option>`).join('');
+  document.getElementById('filterBike').innerHTML = '<option value="">All Bikes</option>' + opts;
+  document.getElementById('fExpBike').innerHTML = '<option value="">Select Bike</option>' + opts;
+}
+
+function onBikeChange() {
+  const sel = document.getElementById('fExpBike');
+  const opt = sel.options[sel.selectedIndex];
+  if(sel.value) {
+    document.getElementById('fExpBike').setAttribute('data-name', opt.getAttribute('data-name'));
+    document.getElementById('fExpBike').setAttribute('data-num', opt.getAttribute('data-num'));
+  }
+}
+
+function calcExpAmt() {
+  const q=parseFloat(document.getElementById('fExpQty').value)||0;
+  const r=parseFloat(document.getElementById('fExpRate').value)||0;
+  if(q&&r) document.getElementById('fExpAmount').value=(q*r).toFixed(2);
+}
+
+async function loadExpenses() {
+  const bikeId = document.getElementById('filterBike').value;
+  const data = await api(`/api/bike/expense${bikeId?'?bike_id='+bikeId:''}`);
+  const total = data.reduce((s,r)=>s+parseFloat(r.amount),0);
+  document.getElementById('expTotal').textContent = fmt(total);
+  const tbody = document.getElementById('expTableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🔧</div><p>No maintenance records</p></div></td></tr>';return;}
+  tbody.innerHTML = data.map(r=>`<tr>
+    <td>${r.date_bs}</td>
+    <td>${r.bike_name}<br><small style="color:var(--text-muted)">${r.bike_number||''}</small></td>
+    <td>${r.particular||'—'}</td>
+    <td>${parseFloat(r.quantity||1).toFixed(2)}</td>
+    <td>${fmt(r.rate||0)}</td>
+    <td class="negative">${fmt(r.amount)}</td>
+    <td style="color:var(--text-muted)">${r.remarks||'—'}</td>
+    <td><button class="btn btn-warning btn-icon" onclick='editExpense(${JSON.stringify(r)})'>✏️</button> <button class="btn btn-danger btn-icon" onclick="deleteExpense(${r.id})">🗑️</button></td>
+  </tr>`).join('');
+}
+
+function openBikeModal(){document.getElementById('editBikeId').value='';document.getElementById('bikeModalTitle').textContent='Add Bike';['fBikeName','fBikeNum','fBikePrice','fBikeDate'].forEach(id=>document.getElementById(id).value='');document.getElementById('bikeModal').classList.add('active');}
+function editBike(b){document.getElementById('editBikeId').value=b.id;document.getElementById('bikeModalTitle').textContent='Edit Bike';document.getElementById('fBikeName').value=b.bike_name;document.getElementById('fBikeNum').value=b.bike_number||'';document.getElementById('fBikePrice').value=b.purchase_price;document.getElementById('fBikeDate').value=b.purchase_date||'';document.getElementById('bikeModal').classList.add('active');}
+function closeBikeModal(){document.getElementById('bikeModal').classList.remove('active');}
+async function saveBike(){const id=document.getElementById('editBikeId').value;const body={bike_name:document.getElementById('fBikeName').value,bike_number:document.getElementById('fBikeNum').value,purchase_price:parseFloat(document.getElementById('fBikePrice').value)||0,purchase_date:document.getElementById('fBikeDate').value||null};const res=await api(id?`/api/bike/${id}`:'/api/bike',id?'PUT':'POST',body);if(res.success){showToast(res.message);closeBikeModal();loadBikes();}else showToast(res.message||'Error','error');}
+async function deleteBike(id){if(!await confirm_delete('Delete this bike and all related records?'))return;const res=await api(`/api/bike/${id}`,'DELETE');if(res.success){showToast(res.message);loadBikes();}else showToast('Error','error');}
+
+function openExpenseModal(){document.getElementById('editExpId').value='';document.getElementById('expModalTitle').textContent='Add Maintenance';document.getElementById('fExpBike').value='';document.getElementById('fExpParticular').value='';document.getElementById('fExpQty').value=1;document.getElementById('fExpRate').value='';document.getElementById('fExpAmount').value='';document.getElementById('fExpRemarks').value='';const b=getCurrentBSDate();document.getElementById('fExpDateBs').value=b.date_str;document.getElementById('fExpDateAd').value=b.date_ad;document.getElementById('fExpYear').value=b.year;document.getElementById('fExpMonth').value=b.month;document.getElementById('expenseModal').classList.add('active');}
+function editExpense(r){document.getElementById('editExpId').value=r.id;document.getElementById('expModalTitle').textContent='Edit Maintenance';document.getElementById('fExpBike').value=r.bike_id||'';document.getElementById('fExpDateBs').value=r.date_bs||'';document.getElementById('fExpDateAd').value=r.date_ad||'';document.getElementById('fExpYear').value=r.year_bs||'';document.getElementById('fExpMonth').value=r.month_num||1;document.getElementById('fExpParticular').value=r.particular||'';document.getElementById('fExpQty').value=r.quantity||1;document.getElementById('fExpRate').value=r.rate||0;document.getElementById('fExpAmount').value=r.amount;document.getElementById('fExpRemarks').value=r.remarks||'';document.getElementById('expenseModal').classList.add('active');}
+function closeExpModal(){document.getElementById('expenseModal').classList.remove('active');}
+async function saveExpense(){const id=document.getElementById('editExpId').value;const bikeEl=document.getElementById('fExpBike');const monthNum=parseInt(document.getElementById('fExpMonth').value);const body={bike_id:bikeEl.value||null,bike_name:bikeEl.options[bikeEl.selectedIndex]?.getAttribute('data-name')||'',bike_number:bikeEl.options[bikeEl.selectedIndex]?.getAttribute('data-num')||'',date_bs:document.getElementById('fExpDateBs').value,date_ad:document.getElementById('fExpDateAd').value,year_bs:parseInt(document.getElementById('fExpYear').value),month_bs:BS_MONTHS[monthNum-1],month_num:monthNum,particular:document.getElementById('fExpParticular').value,quantity:parseFloat(document.getElementById('fExpQty').value)||1,rate:parseFloat(document.getElementById('fExpRate').value)||0,amount:parseFloat(document.getElementById('fExpAmount').value)||0,remarks:document.getElementById('fExpRemarks').value};const res=await api(id?`/api/bike/expense/${id}`:'/api/bike/expense',id?'PUT':'POST',body);if(res.success){showToast(res.message);closeExpModal();loadExpenses();}else showToast(res.message||'Error','error');}
+async function deleteExpense(id){if(!await confirm_delete())return;const res=await api(`/api/bike/expense/${id}`,'DELETE');if(res.success){showToast(res.message);loadExpenses();}else showToast('Error','error');}
+
+loadBikes();
+</script>
+</body>
+</html>

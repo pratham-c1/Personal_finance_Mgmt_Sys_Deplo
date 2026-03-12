@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">💰</div>
+      <div class="sidebar-title">Personal Finance<span>Management System</span></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-secondary btn-full btn-sm" onclick="logout()">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">📊 Dashboard</div>
+      <div class="topbar-right">
+        <div class="date-badge" id="bsDate">Loading...</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card income"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="stat-card expense"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="stat-card savings"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="stat-card networth"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="stat-card loans"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="stat-card shares"><div class="loader"><div class="spinner"></div></div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📅 Monthly Income vs Expense</span></div>
+          <div class="card-body"><div class="chart-container"><canvas id="incomeExpenseChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🍕 Expense by Category</span></div>
+          <div class="card-body"><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📈 Net Worth Trend</span></div>
+          <div class="card-body"><div class="chart-container"><canvas id="networthChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">💰 Income Sources</span></div>
+          <div class="card-body"><div class="chart-container"><canvas id="incomeSourceChart"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script>
+document.getElementById('sidebarNav').innerHTML = buildSidebar('dashboard');
+const bs = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bs.day} ${bs.month_name} ${bs.year} BS`;
+
+const CHART_COLORS = ['#00d4ff','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4','#8b5cf6','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa'];
+
+async function loadDashboard() {
+  const summary = await api('/api/dashboard/summary');
+  const statsGrid = document.getElementById('statsGrid');
+  statsGrid.innerHTML = `
+    <div class="stat-card income">
+      <div class="stat-icon">💵</div>
+      <div class="stat-value">${formatCurrency(summary.total_income)}</div>
+      <div class="stat-label">Total Income</div>
+    </div>
+    <div class="stat-card expense">
+      <div class="stat-icon">💳</div>
+      <div class="stat-value">${formatCurrency(summary.total_expense)}</div>
+      <div class="stat-label">Total Expenditure</div>
+    </div>
+    <div class="stat-card savings">
+      <div class="stat-icon">🏦</div>
+      <div class="stat-value">${formatCurrency(summary.savings)}</div>
+      <div class="stat-label">Savings</div>
+    </div>
+    <div class="stat-card networth">
+      <div class="stat-icon">📈</div>
+      <div class="stat-value">${formatCurrency(summary.net_worth)}</div>
+      <div class="stat-label">Net Worth</div>
+    </div>
+    <div class="stat-card loans">
+      <div class="stat-icon">🤝</div>
+      <div class="stat-value">${formatCurrency(summary.loan_amount)}</div>
+      <div class="stat-label">Loans Given</div>
+    </div>
+    <div class="stat-card shares">
+      <div class="stat-icon">📉</div>
+      <div class="stat-value">${formatCurrency(summary.share_value)}</div>
+      <div class="stat-label">Share Portfolio</div>
+    </div>`;
+
+  // Monthly chart
+  const [monthly_income, monthly_expense] = await Promise.all([
+    api('/api/dashboard/monthly-income'),
+    api('/api/dashboard/monthly-expense')
+  ]);
+
+  const allMonths = [...new Set([...monthly_income.map(d=>d.month_bs), ...monthly_expense.map(d=>d.month_bs)])].slice(0,12).reverse();
+  const incomeMap = Object.fromEntries(monthly_income.map(d=>[d.month_bs, parseFloat(d.total)]));
+  const expenseMap = Object.fromEntries(monthly_expense.map(d=>[d.month_bs, parseFloat(d.total)]));
+
+  new Chart(document.getElementById('incomeExpenseChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: allMonths,
+      datasets: [
+        { label: 'Income', data: allMonths.map(m=>incomeMap[m]||0), backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 6 },
+        { label: 'Expense', data: allMonths.map(m=>expenseMap[m]||0), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } },
+      scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#94a3b8', callback: v => 'Rs.'+v.toLocaleString('en-IN') }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+
+  // Category pie
+  const cats = await api('/api/dashboard/expense-categories');
+  if (cats.length) {
+    new Chart(document.getElementById('categoryChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: cats.map(c=>c.category),
+        datasets: [{ data: cats.map(c=>parseFloat(c.total)), backgroundColor: CHART_COLORS, borderWidth: 0, hoverOffset: 8 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } } } }
+    });
+  }
+
+  // Net worth trend
+  const nwTrend = await api('/api/dashboard/networth-trend');
+  if (nwTrend.length) {
+    new Chart(document.getElementById('networthChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: nwTrend.reverse().map(d=>d.date_ad),
+        datasets: [{ label: 'Net Worth', data: nwTrend.map(d=>parseFloat(d.net_worth)),
+          borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.1)',
+          fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#7c3aed' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#94a3b8', callback: v => 'Rs.'+v.toLocaleString('en-IN') }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+    });
+  }
+
+  // Income sources
+  const incomeSrc = await api('/api/income/summary');
+  if (incomeSrc.length) {
+    new Chart(document.getElementById('incomeSourceChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: incomeSrc.map(d=>d.category),
+        datasets: [{ label: 'Income', data: incomeSrc.map(d=>parseFloat(d.total)),
+          backgroundColor: CHART_COLORS, borderRadius: 6 }]
+      },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: '#94a3b8', callback: v=>'Rs.'+v.toLocaleString('en-IN') }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { display: false } } } }
+    });
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
