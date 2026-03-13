@@ -362,8 +362,18 @@ select.form-control { cursor: pointer; }
 @media (max-width: 767px) {
   :root { --sidebar-w: 240px; }
 
-  .sidebar { transform: translateX(-100%); box-shadow: none; }
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height — fixes mobile browser address-bar shrink */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
   .sidebar.open { transform: translateX(0); box-shadow: 4px 0 30px rgba(0,0,0,0.5); }
+  .nav-links { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .sidebar-footer { flex-shrink: 0; }
   .main-content { margin-left: 0; }
   .hamburger    { display: flex; }
 
