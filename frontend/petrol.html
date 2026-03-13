@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petrol — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  /* remaining fuel toggle */
+  .fuel-toggle { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .fuel-toggle label { font-size:13px; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .toggle-switch { position:relative; width:42px; height:24px; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:rgba(255,255,255,0.1); border-radius:24px; cursor:pointer; transition:0.3s; border:1px solid var(--border); }
+  .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:2px; top:2px; background:var(--text-muted); border-radius:50%; transition:0.3s; }
+  .toggle-switch input:checked + .toggle-slider { background:var(--green); border-color:var(--green); }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); background:white; }
+  /* calc breakdown */
+  .calc-breakdown { background:rgba(0,212,255,0.04); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-top:12px; font-size:12.5px; color:var(--text-muted); display:none; }
+  .calc-breakdown.show { display:block; }
+  .calc-row { display:flex; justify-content:space-between; padding:3px 0; }
+  .calc-row.total { border-top:1px solid var(--border); margin-top:6px; padding-top:8px; font-weight:600; color:var(--accent); font-size:13px; }
+  /* prev km info box */
+  .prev-km-info { background:rgba(124,58,237,0.08); border:1px solid rgba(124,58,237,0.2); border-radius:10px; padding:10px 14px; font-size:12.5px; color:var(--text-muted); margin-bottom:14px; display:none; }
+  .prev-km-info.show { display:flex; align-items:center; gap:8px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-container"></div>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <div class="main-content">
+    <div class="topbar">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="topbar-title">⛽ Petrol & Mileage</div>
+      <div class="topbar-right"><div class="date-badge" id="bsDate"></div></div>
+    </div>
+    <div class="page-body">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⛽ Petrol & Mileage Tracker</div>
+          <div class="page-subtitle">Tracks mileage using odometer history from database</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Entry</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card" style="border-top:2px solid var(--gold)"><div class="stat-icon" style="background:rgba(245,158,11,0.15);color:var(--gold)">💰</div><div class="stat-value" id="totalSpent">Rs. 0</div><div class="stat-label">Total Spent</div></div>
+        <div class="stat-card" style="border-top:2px solid var(--accent)"><div class="stat-icon" style="background:rgba(0,212,255,0.15);color:var(--accent)">🛢️</div><div class="stat-value" id="totalLiters">0 L</div><div class="stat-label">Total Liters</div></div>
+        <div class="stat-card" style="border-top:2px solid var(--green)"><div class="stat-icon" style="background:rgba(16,185,129,0.15);color:var(--green)">📏</div><div class="stat-value" id="avgMileage">0 km/L</div><div class="stat-label">Avg Mileage</div></div>
+        <div class="stat-card" style="border-top:2px solid var(--accent2)"><div class="stat-icon" style="background:rgba(124,58,237,0.15);color:var(--accent2)">🏍️</div><div class="stat-value" id="totalDistance">0 km</div><div class="stat-label">Total Distance</div></div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">⛽ Monthly Petrol Cost</span></div>
+        <div class="card-body"><div class="chart-container"><canvas id="petrolChart"></canvas></div></div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <div class="form-group"><label class="form-label">Bike</label><select id="filterBike" class="form-control"><option value="">All Bikes</option></select></div>
+        <button class="btn btn-primary" onclick="loadData()">🔍 Filter</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('filterBike').value='';loadData()">✕ Clear</button>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Petrol Records</span></div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date BS</th><th>Bike</th>
+                <th>Amt Paid</th><th>Rs/L</th>
+                <th>Filled (L)</th><th>Remaining (L)</th><th>Total Fuel (L)</th>
+                <th>Prev KM</th><th>Curr KM</th><th>Distance</th><th>Mileage</th>
+                <th>Remarks</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="13"><div class="loader"><div class="spinner"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+      <footer class="site-footer">
+        © 2026 All Rights Reserved &nbsp;<span class="footer-divider">|</span>&nbsp;
+        <strong style="color:var(--text)">Pratham Chaulagain</strong>
+        <span class="footer-divider">|</span>
+        <a href="mailto:prathamchaulagai1@gmail.com">prathamchaulagai1@gmail.com</a>
+      </footer>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Add Petrol Entry</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+
+      <!-- Bike selection -->
+      <div class="form-group">
+        <label class="form-label">Bike *</label>
+        <select id="fBike" class="form-control" onchange="onBikeOrDateChange()">
+          <option value="">Select Bike</option>
+        </select>
+      </div>
+
+      <!-- Dates -->
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date BS</label><input type="text" id="fDateBs" class="form-control" placeholder="e.g. 2082-11-29"></div>
+        <div class="form-group"><label class="form-label">Date AD *</label><input type="date" id="fDateAd" class="form-control" onchange="onBikeOrDateChange()"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Year BS</label><input type="number" id="fYear" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Month BS</label>
+          <select id="fMonth" class="form-control">
+            <option value="1">Baisakh</option><option value="2">Jestha</option><option value="3">Ashadh</option>
+            <option value="4">Shrawan</option><option value="5">Bhadra</option><option value="6">Ashwin</option>
+            <option value="7">Kartik</option><option value="8">Mangsir</option><option value="9">Poush</option>
+            <option value="10">Magh</option><option value="11">Falgun</option><option value="12">Chaitra</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Previous KM info (auto-fetched) -->
+      <div class="prev-km-info" id="prevKmInfo">
+        <span>📍</span>
+        <span id="prevKmText">Loading previous odometer...</span>
+      </div>
+
+      <!-- Amount & price -->
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Amount Paid (Rs.) *</label>
+          <input type="number" id="fAmt" class="form-control" placeholder="0" step="0.01" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price per Liter (Rs.) *</label>
+          <input type="number" id="fPPL" class="form-control" placeholder="e.g. 178" step="0.01" oninput="recalc()">
+        </div>
+      </div>
+
+      <!-- Current odometer -->
+      <div class="form-group">
+        <label class="form-label">Current Odometer (KM) *</label>
+        <input type="number" id="fKM" class="form-control" placeholder="Odometer reading at time of refueling" oninput="recalc()">
+      </div>
+
+      <!-- Remaining fuel toggle -->
+      <div class="fuel-toggle">
+        <label>
+          <span class="toggle-switch">
+            <input type="checkbox" id="hasRemaining" onchange="toggleRemaining()">
+            <span class="toggle-slider"></span>
+          </span>
+          Any fuel remaining from last fill?
+        </label>
+      </div>
+
+      <!-- Remaining fuel quantity (shown only when toggle is ON) -->
+      <div id="remainingFuelGroup" style="display:none; margin-bottom:18px;">
+        <label class="form-label">Remaining Fuel from Last Fill (Liters)</label>
+        <input type="number" id="fRemaining" class="form-control" placeholder="e.g. 1.5" step="0.001" min="0" oninput="recalc()">
+        <small style="color:var(--text-muted);font-size:11px;margin-top:4px;display:block">
+          Estimate how many liters were left in the tank before this refuel.
+          This will be added to the newly filled amount for accurate mileage.
+        </small>
+      </div>
+
+      <!-- Live calculation display -->
+      <div class="calc-breakdown" id="calcBreakdown">
+        <div class="calc-row"><span>Amount paid ÷ Price per liter</span><span id="brkLiters">— L filled</span></div>
+        <div class="calc-row" id="brkRemRow" style="display:none"><span>+ Remaining fuel</span><span id="brkRem">— L</span></div>
+        <div class="calc-row total"><span>Total fuel used</span><span id="brkTotal">— L</span></div>
+        <div class="calc-row" style="margin-top:8px"><span>Current odometer − Previous odometer</span><span id="brkDist">— km</span></div>
+        <div class="calc-row total"><span>Mileage (distance ÷ total fuel)</span><span id="brkMileage">— km/L</span></div>
+        <div class="calc-row" style="color:var(--text-muted)"><span>Cost per km</span><span id="brkCostKM">— Rs/km</span></div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Remarks</label>
+        <input type="text" id="fRemarks" class="form-control" placeholder="Optional notes">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRecord()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+buildSidebar('petrol');
+const bsNow = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bsNow.day} ${bsNow.month_name} ${bsNow.year} BS`;
+
+// State
+let prevKMFromDB    = 0;   // fetched from server for selected bike+date
+let prevRemainingDB = 0;   // not used in form, just informational
+
+// ── Load bikes into dropdowns ─────────────────────────────────────────────────
+async function loadBikes() {
+  const bikes = await api('/api/bike');
+  const opts = bikes.map(b =>
+    `<option value="${b.id}" data-name="${b.bike_name}" data-num="${b.bike_number||''}">${b.bike_name} (${b.bike_number||'—'})</option>`
+  ).join('');
+  document.getElementById('filterBike').innerHTML = '<option value="">All Bikes</option>' + opts;
+  document.getElementById('fBike').innerHTML       = '<option value="">Select Bike</option>' + opts;
+}
+
+// ── Called when bike or date changes — fetches prev KM from server ────────────
+async function onBikeOrDateChange() {
+  const bikeId   = document.getElementById('fBike').value;
+  const dateAd   = document.getElementById('fDateAd').value;
+  const editId   = document.getElementById('editId').value;
+  const infoBox  = document.getElementById('prevKmInfo');
+  const infoText = document.getElementById('prevKmText');
+
+  if (!bikeId || !dateAd) {
+    prevKMFromDB = 0;
+    infoBox.classList.remove('show');
+    recalc();
+    return;
+  }
+
+  infoBox.classList.add('show');
+  infoText.textContent = 'Fetching previous odometer...';
+
+  const url = `/api/petrol/prev-km?bike_id=${bikeId}&date_ad=${dateAd}${editId ? '&exclude_id='+editId : ''}`;
+  const res = await api(url);
+  prevKMFromDB = res.previous_km || 0;
+
+  if (prevKMFromDB > 0) {
+    infoText.textContent = `Previous odometer reading: ${prevKMFromDB.toLocaleString('en-IN')} km`;
+  } else {
+    infoText.textContent = 'No previous entry found — this is the first record for this bike. Distance will be calculated from 0.';
+  }
+
+  recalc();
+}
+
+// ── Toggle remaining fuel input ───────────────────────────────────────────────
+function toggleRemaining() {
+  const on    = document.getElementById('hasRemaining').checked;
+  const group = document.getElementById('remainingFuelGroup');
+  group.style.display = on ? 'block' : 'none';
+  if (!on) document.getElementById('fRemaining').value = '';
+  recalc();
+}
+
+// ── Live calculation (purely frontend display, server re-calculates on save) ──
+function recalc() {
+  const amt       = parseFloat(document.getElementById('fAmt').value) || 0;
+  const ppl       = parseFloat(document.getElementById('fPPL').value) || 0;
+  const currKM    = parseInt(document.getElementById('fKM').value)    || 0;
+  const remaining = parseFloat(document.getElementById('fRemaining').value) || 0;
+
+  const liters_filled = ppl > 0 ? amt / ppl : 0;
+  const total_fuel    = liters_filled + remaining;
+  const distance      = Math.max(0, currKM - prevKMFromDB);
+  const mileage       = total_fuel > 0 && distance > 0 ? distance / total_fuel : 0;
+  const costPerKm     = distance > 0 ? amt / distance : 0;
+
+  // Show/hide breakdown
+  const bd = document.getElementById('calcBreakdown');
+  if (amt > 0 || currKM > 0) {
+    bd.classList.add('show');
+  }
+
+  document.getElementById('brkLiters').textContent  = `${liters_filled.toFixed(3)} L filled`;
+  document.getElementById('brkTotal').textContent   = `${total_fuel.toFixed(3)} L`;
+  document.getElementById('brkDist').textContent    = `${distance.toLocaleString('en-IN')} km`;
+  document.getElementById('brkMileage').textContent = mileage > 0 ? `${mileage.toFixed(2)} km/L` : '— (need valid data)';
+  document.getElementById('brkCostKM').textContent  = costPerKm > 0 ? `Rs. ${costPerKm.toFixed(2)}/km` : '—';
+
+  // Remaining row
+  const remRow = document.getElementById('brkRemRow');
+  const hasRem = document.getElementById('hasRemaining').checked;
+  if (hasRem && remaining > 0) {
+    remRow.style.display = 'flex';
+    document.getElementById('brkRem').textContent = `${remaining.toFixed(3)} L`;
+  } else {
+    remRow.style.display = 'none';
+  }
+}
+
+// ── Load data & stats ─────────────────────────────────────────────────────────
+async function loadData() {
+  const bikeId = document.getElementById('filterBike').value;
+  const data   = await api(`/api/petrol${bikeId ? '?bike_id=' + bikeId : ''}`);
+
+  // Stats
+  const ts = data.reduce((s, r) => s + parseFloat(r.amount_paid || 0), 0);
+  const tl = data.reduce((s, r) => s + parseFloat(r.liters || 0), 0);
+  const td = data.reduce((s, r) => s + parseInt(r.distance || 0), 0);
+  const validM = data.filter(r => parseFloat(r.mileage) > 0);
+  const am = validM.length ? validM.reduce((s, r) => s + parseFloat(r.mileage), 0) / validM.length : 0;
+
+  document.getElementById('totalSpent').textContent    = fmt(ts);
+  document.getElementById('totalLiters').textContent   = tl.toFixed(2) + ' L';
+  document.getElementById('avgMileage').textContent    = am.toFixed(2) + ' km/L';
+  document.getElementById('totalDistance').textContent = td.toLocaleString('en-IN') + ' km';
+
+  // Chart
+  const byMonth = {};
+  data.forEach(r => {
+    const key = (r.month_bs || '?') + ' ' + r.year_bs;
+    byMonth[key] = (byMonth[key] || 0) + parseFloat(r.amount_paid || 0);
+  });
+  const months = Object.keys(byMonth).slice(-12).reverse();
+  const ctx = document.getElementById('petrolChart').getContext('2d');
+  if (window._pChart) window._pChart.destroy();
+  window._pChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{ label: 'Petrol Cost', data: months.map(m => byMonth[m] || 0), backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#94a3b8', callback: v => 'Rs.' + v.toLocaleString('en-IN') }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  // Table
+  const tbody = document.getElementById('tableBody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">⛽</div><p>No petrol records yet</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => {
+    const mileage   = parseFloat(r.mileage || 0);
+    const remaining = parseFloat(r.remaining_fuel || 0);
+    const totalFuel = parseFloat(r.liters || 0) + remaining;
+    const mClass    = mileage > 40 ? 'badge-green' : mileage > 30 ? 'badge-gold' : 'badge-red';
+    return `<tr>
+      <td>${r.date_bs}</td>
+      <td>${r.bike_name}<br><small style="color:var(--text-muted)">${r.bike_number || ''}</small></td>
+      <td class="negative">${fmt(r.amount_paid)}</td>
+      <td style="color:var(--text-muted)">Rs.${parseFloat(r.price_per_liter).toFixed(0)}</td>
+      <td style="color:var(--accent)">${parseFloat(r.liters || 0).toFixed(3)} L</td>
+      <td style="color:${remaining > 0 ? 'var(--gold)' : 'var(--text-muted)'}">${remaining > 0 ? remaining.toFixed(3) + ' L' : '—'}</td>
+      <td style="color:var(--green)">${totalFuel.toFixed(3)} L</td>
+      <td style="color:var(--text-muted)">${parseInt(r.previous_km || 0).toLocaleString()} km</td>
+      <td>${parseInt(r.current_km || 0).toLocaleString()} km</td>
+      <td>${parseInt(r.distance || 0).toLocaleString()} km</td>
+      <td><span class="badge ${mClass}">${mileage.toFixed(1)} km/L</span></td>
+      <td style="color:var(--text-muted)">${r.remarks || '—'}</td>
+      <td>
+        <button class="btn btn-warning btn-icon" onclick='editRecord(${JSON.stringify(r)})' title="Edit">✏️</button>
+        <button class="btn btn-danger btn-icon" onclick="deleteRecord(${r.id})" title="Delete">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Prefill dates ─────────────────────────────────────────────────────────────
+function prefillDates() {
+  const b = getCurrentBSDate();
+  document.getElementById('fDateBs').value = b.date_str;
+  document.getElementById('fDateAd').value  = b.date_ad;
+  document.getElementById('fYear').value    = b.year;
+  document.getElementById('fMonth').value   = b.month;
+}
+
+// ── Open modal (add) ──────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('editId').value         = '';
+  document.getElementById('modalTitle').textContent = 'Add Petrol Entry';
+  document.getElementById('fBike').value          = '';
+  document.getElementById('fAmt').value           = '';
+  document.getElementById('fPPL').value           = '';
+  document.getElementById('fKM').value            = '';
+  document.getElementById('fRemarks').value       = '';
+  document.getElementById('fRemaining').value     = '';
+  document.getElementById('hasRemaining').checked = false;
+  document.getElementById('remainingFuelGroup').style.display = 'none';
+  document.getElementById('prevKmInfo').classList.remove('show');
+  document.getElementById('calcBreakdown').classList.remove('show');
+  prevKMFromDB = 0;
+  prefillDates();
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+// ── Open modal (edit) ─────────────────────────────────────────────────────────
+async function editRecord(r) {
+  document.getElementById('editId').value           = r.id;
+  document.getElementById('modalTitle').textContent = 'Edit Petrol Entry';
+  document.getElementById('fBike').value            = r.bike_id || '';
+  document.getElementById('fDateBs').value          = r.date_bs || '';
+  document.getElementById('fDateAd').value          = r.date_ad || '';
+  document.getElementById('fYear').value            = r.year_bs || '';
+  document.getElementById('fMonth').value           = r.month_num || 1;
+  document.getElementById('fAmt').value             = r.amount_paid;
+  document.getElementById('fPPL').value             = r.price_per_liter;
+  document.getElementById('fKM').value              = r.current_km || 0;
+  document.getElementById('fRemarks').value         = r.remarks || '';
+
+  const remaining = parseFloat(r.remaining_fuel || 0);
+  if (remaining > 0) {
+    document.getElementById('hasRemaining').checked               = true;
+    document.getElementById('remainingFuelGroup').style.display   = 'block';
+    document.getElementById('fRemaining').value                   = remaining;
+  } else {
+    document.getElementById('hasRemaining').checked               = false;
+    document.getElementById('remainingFuelGroup').style.display   = 'none';
+    document.getElementById('fRemaining').value                   = '';
+  }
+
+  document.getElementById('modalOverlay').classList.add('active');
+
+  // Fetch prev KM from DB (excluding this record)
+  await onBikeOrDateChange();
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function saveRecord() {
+  const id       = document.getElementById('editId').value;
+  const bikeEl   = document.getElementById('fBike');
+  const monthNum = parseInt(document.getElementById('fMonth').value);
+
+  const remaining = document.getElementById('hasRemaining').checked
+    ? parseFloat(document.getElementById('fRemaining').value) || 0
+    : 0;
+
+  const body = {
+    bike_id:         bikeEl.value || null,
+    bike_name:       bikeEl.options[bikeEl.selectedIndex]?.getAttribute('data-name') || '',
+    bike_number:     bikeEl.options[bikeEl.selectedIndex]?.getAttribute('data-num') || '',
+    date_bs:         document.getElementById('fDateBs').value,
+    date_ad:         document.getElementById('fDateAd').value,
+    year_bs:         parseInt(document.getElementById('fYear').value),
+    month_bs:        BS_MONTHS[monthNum - 1],
+    month_num:       monthNum,
+    amount_paid:     parseFloat(document.getElementById('fAmt').value) || 0,
+    price_per_liter: parseFloat(document.getElementById('fPPL').value) || 0,
+    current_km:      parseInt(document.getElementById('fKM').value) || 0,
+    remaining_fuel:  remaining,
+    remarks:         document.getElementById('fRemarks').value
+  };
+
+  if (!body.bike_id)         { showToast('Please select a bike', 'error');  return; }
+  if (!body.date_ad)         { showToast('Please enter date', 'error');      return; }
+  if (!body.amount_paid)     { showToast('Please enter amount paid', 'error'); return; }
+  if (!body.price_per_liter) { showToast('Please enter price per liter', 'error'); return; }
+  if (!body.current_km)      { showToast('Please enter current odometer reading', 'error'); return; }
+
+  const res = await api(id ? `/api/petrol/${id}` : '/api/petrol', id ? 'PUT' : 'POST', body);
+  if (res.success) {
+    const info = res.mileage
+      ? ` | Prev: ${res.previous_km} km | Dist: ${res.distance} km | Mileage: ${res.mileage} km/L`
+      : '';
+    showToast(res.message + info);
+    closeModal();
+    loadData();
+  } else {
+    showToast(res.message || 'Error saving record', 'error');
+  }
+}
+
+async function deleteRecord(id) {
+  if (!await confirm_delete('Delete this petrol record?')) return;
+  const res = await api(`/api/petrol/${id}`, 'DELETE');
+  if (res.success) { showToast(res.message); loadData(); }
+  else showToast('Error', 'error');
+}
+
+loadBikes().then(() => loadData());
+</script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Personal Finance</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-container"></div>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <div class="main-content">
+    <div class="topbar">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="topbar-title">⚙️ Settings</div><div class="topbar-right"><div class="date-badge" id="bsDate"></div></div></div>
+    <div class="page-body" style="max-width:700px">
+      <div class="page-header">
+        <div class="page-header-title">⚙️ System Settings</div>
+      </div>
+
+      <!-- Change Password -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔑 Change Password</span></div>
+        <div class="card-body">
+          <div id="pwMsg" style="display:none" class="alert"></div>
+          <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="oldPw" class="form-control" placeholder="Enter current password"></div>
+          <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPw" class="form-control" placeholder="Enter new password"></div>
+          <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="confirmPw" class="form-control" placeholder="Confirm new password"></div>
+          <button class="btn btn-primary" onclick="changePassword()">🔐 Update Password</button>
+        </div>
+      </div>
+
+      <!-- System Info -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">ℹ️ System Information</span></div>
+        <div class="card-body">
+          <div style="display:grid;gap:12px">
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Application</span><span style="font-weight:500">Personal Finance Management System</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Version</span><span style="color:var(--accent);font-weight:500">v1.0.0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Backend</span><span style="font-weight:500">Python Flask + MySQL</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Currency</span><span style="font-weight:500">NPR (Nepali Rupee)</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Calendar</span><span style="font-weight:500">Bikram Sambat (BS)</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px">
+              <span style="color:var(--text-muted)">Today (BS)</span><span id="todayBS" style="color:var(--accent);font-weight:500"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🚀 Quick Navigation</span></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
+            <a href="income.html" class="btn btn-secondary">💵 Income</a>
+            <a href="expense.html" class="btn btn-secondary">💳 Expenditure</a>
+            <a href="networth.html" class="btn btn-secondary">📈 Net Worth</a>
+            <a href="loan.html" class="btn btn-secondary">🤝 Loans</a>
+            <a href="share.html" class="btn btn-secondary">📉 Shares</a>
+            <a href="bike.html" class="btn btn-secondary">🏍️ Bike</a>
+            <a href="petrol.html" class="btn btn-secondary">⛽ Petrol</a>
+            <a href="baby.html" class="btn btn-secondary">👶 Baby</a>
+            <a href="reports.html" class="btn btn-secondary">📋 Reports</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Stats -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Data Summary</span><button class="btn btn-secondary btn-sm" onclick="loadStats()">🔄 Refresh</button></div>
+        <div class="card-body">
+          <div id="statsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
+        </div>
+      </div>
+
+    </div>
+      <footer class="site-footer">
+        © 2026 All Rights Reserved &nbsp;<span class="footer-divider">|</span>&nbsp;
+        <strong style="color:var(--text)">Pratham Chaulagain</strong>
+        <span class="footer-divider">|</span>
+        <a href="mailto:prathamchaulagai1@gmail.com">prathamchaulagai1@gmail.com</a>
+      </footer>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script>
+buildSidebar('settings');
+const bsNow = getCurrentBSDate();
+document.getElementById('bsDate').textContent = `📅 ${bsNow.day} ${bsNow.month_name} ${bsNow.year} BS`;
+document.getElementById('todayBS').textContent = `${bsNow.day} ${bsNow.month_name} ${bsNow.year}`;
+
+async function changePassword() {
+  const old = document.getElementById('oldPw').value;
+  const nw = document.getElementById('newPw').value;
+  const conf = document.getElementById('confirmPw').value;
+  const msgEl = document.getElementById('pwMsg');
+  if (!old||!nw||!conf) { showMsg('All fields required','danger'); return; }
+  if (nw !== conf) { showMsg('New passwords do not match','danger'); return; }
+  if (nw.length < 6) { showMsg('Password must be at least 6 characters','danger'); return; }
+  const res = await api('/api/auth/change-password','POST',{old_password:old,new_password:nw});
+  if(res.success){ showMsg(res.message,'success'); document.getElementById('oldPw').value=''; document.getElementById('newPw').value=''; document.getElementById('confirmPw').value=''; }
+  else showMsg(res.message||'Error','danger');
+}
+
+function showMsg(msg, type) {
+  const el = document.getElementById('pwMsg');
+  el.style.display='flex'; el.className=`alert alert-${type}`; el.textContent=msg;
+  setTimeout(()=>el.style.display='none', 4000);
+}
+
+async function loadStats() {
+  const [income, expense, nw, loans, shares, bikes] = await Promise.all([
+    api('/api/income?').then(d=>d.length),
+    api('/api/expense?').then(d=>d.length),
+    api('/api/networth').then(d=>d.length),
+    api('/api/loan').then(d=>d.length),
+    api('/api/share').then(d=>d.length),
+    api('/api/bike').then(d=>d.length),
+  ]);
+  const items = [
+    {icon:'💵',label:'Income Records',val:income},
+    {icon:'💳',label:'Expense Records',val:expense},
+    {icon:'📈',label:'Net Worth Entries',val:nw},
+    {icon:'🤝',label:'Loan Records',val:loans},
+    {icon:'📉',label:'Share Holdings',val:shares},
+    {icon:'🏍️',label:'Bikes',val:bikes},
+  ];
+  document.getElementById('statsGrid').innerHTML = items.map(i=>`
+    <div style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:16px;border:1px solid var(--border)">
+      <div style="font-size:24px;margin-bottom:6px">${i.icon}</div>
+      <div style="font-family:Syne,sans-serif;font-size:24px;font-weight:700;color:var(--accent)">${i.val}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${i.label}</div>
+    </div>`).join('');
+}
+
+loadStats();
+</script>
+</body>
+</html>
